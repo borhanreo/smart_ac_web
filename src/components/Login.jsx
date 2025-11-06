@@ -6,7 +6,10 @@ export default function Login({ onLogin }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const handleLogin = async () => {
-    try { const userCred = await signInWithEmailAndPassword(auth, email, password); onLogin(userCred.user); }
+    try {
+       const userCred = await signInWithEmailAndPassword(auth, email, password); onLogin(userCred.user); 
+       //const userCred = await firebase.auth().signInWithEmailAndPassword(email, password); onLogin(userCred.user);
+      }
     catch (err) { setError(err.message); }
   };
   return (<div className="login-container"><h2>AC Controller Login</h2>
