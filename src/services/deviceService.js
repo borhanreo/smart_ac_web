@@ -102,6 +102,80 @@ export const updateDeviceLastSeen = async (deviceId) => {
   }
 };
 
+// Update device online status by MAC address
+export const updateDeviceStatusByMAC = async (macAddress, isOnline) => {
+  try {
+    const q = query(
+      collection(db, DEVICES_COLLECTION),
+      where('macAddress', '==', macAddress.toUpperCase())
+    );
+    
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+      const deviceDoc = querySnapshot.docs[0];
+      const deviceRef = doc(db, DEVICES_COLLECTION, deviceDoc.id);
+      
+      await updateDoc(deviceRef, {
+        isActive: isOnline,
+        lastSeen: serverTimestamp(),
+        connectionStatus: isOnline ? 'online' : 'offline',
+        lastStatusChange: serverTimestamp()
+      });
+      
+      return { success: true, deviceId: deviceDoc.id };
+    }
+    
+    return { success: false, error: 'Device not found' };
+  } catch (error) {
+    console.error('Error updating device status:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Mark device as offline
+export const markDeviceOffline = async (deviceId) => {
+  try {
+    const deviceRef = doc(db, DEVICES_COLLECTION, deviceId);
+    await updateDoc(deviceRef, {
+      isActive: false,
+      connectionStatus: 'offline',
+      lastStatusChange: serverTimestamp()
+    });
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error marking device offline:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Get device by MAC address (for status updates)
+export const getDeviceByMAC = async (macAddress) => {
+  try {
+    const q = query(
+      collection(db, DEVICES_COLLECTION),
+      where('macAddress', '==', macAddress.toUpperCase())
+    );
+    
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+      const deviceDoc = querySnapshot.docs[0];
+      return {
+        success: true,
+        device: {
+          id: deviceDoc.id,
+          ...deviceDoc.data()
+        }
+      };
+    }
+    
+    return { success: false, error: 'Device not found' };
+  } catch (error) {
+    console.error('Error getting device by MAC:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 // Check if device MAC address is already registered by any user
 export const checkDeviceExists = async (macAddress) => {
   try {
@@ -145,5 +219,45 @@ export const getDeviceInfo = async (macAddress) => {
   } catch (error) {
     console.error('Error getting device info:', error);
     return { exists: false, error: error.message };
+  }
+};
+
+// Handle automatic device registration/update from 5-second status messages
+export const handleDeviceStatusMessage = async (statusData) => {
+  try {
+    const { macAddress, deviceType, location, status } = statusData;
+    
+    if (!macAddress) {
+      return { success: false, error: 'No MAC address provided' };
+    }
+
+    // Check if device exists
+    const existingDevice = await getDeviceByMAC(macAddress);
+    
+    if (existingDevice.success && existingDevice.device) {
+      // Device exists, update its status
+      const result = await updateDeviceStatusByMAC(macAddress, status === 'online');
+      return {
+        success: true,
+        action: 'updated',
+        deviceId: existingDevice.device.id,
+        message: `Device ${macAddress} status updated to ${status}`
+      };
+    } else {
+      // Device doesn't exist, log for potential auto-registration
+      console.log(`📱 New device detected: ${macAddress} (${deviceType || 'Unknown'}) - Status: ${status}`);
+      
+      // For security, we don't auto-register devices
+      // Admin/user needs to manually register them
+      return {
+        success: false,
+        action: 'detected',
+        message: `New device detected but not registered: ${macAddress}`,
+        deviceData: statusData
+      };
+    }
+  } catch (error) {
+    console.error('Error handling device status message:', error);
+    return { success: false, error: error.message };
   }
 };

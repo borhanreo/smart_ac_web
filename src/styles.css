@@ -954,7 +954,330 @@ button:disabled {
   margin: 0.5rem 0;
 }
 
-/* Device Manager Styles */
+/* Modern My Devices Styles - Matching HTML Design */
+.my-devices-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: #f5f0e9; /* Light tan/cream background */
+    font-family: 'Inter', sans-serif;
+}
+
+.my-devices-content {
+    flex-grow: 1;
+    padding: 2.5rem 1rem 1.5rem 1rem;
+    max-width: 80rem;
+    margin: 0 auto;
+    width: 100%;
+}
+
+@media (min-width: 768px) {
+    .my-devices-content {
+        padding: 4rem 2rem 2.5rem 2rem;
+    }
+}
+
+/* Header Title */
+.my-devices-header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+    .my-devices-header {
+        margin-bottom: 4rem;
+    }
+}
+
+.main-title {
+    font-size: clamp(1.5rem, 5vw, 3rem);
+    font-weight: 900;
+    color: #2d3748; /* Dark text color */
+    line-height: 1.1;
+    letter-spacing: -0.05em;
+    text-transform: uppercase;
+    margin: 0;
+}
+
+.register-new-btn-modern {
+    background: linear-gradient(135deg, #ffc107, #ffb300);
+    color: #2d3748;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(255, 193, 7, 0.3);
+}
+
+.register-new-btn-modern:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 193, 7, 0.4);
+}
+
+/* Grid of Devices */
+.devices-grid-modern {
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+    gap: 1.5rem;
+}
+
+@media (min-width: 640px) {
+    .devices-grid-modern {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .devices-grid-modern {
+        gap: 2.5rem;
+    }
+}
+
+/* Device Cards */
+.device-card-modern {
+    background-color: #ffffff; /* White card background */
+    border-radius: 1rem;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 4px solid #ffc107; /* Yellow border */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    min-height: 280px;
+}
+
+@media (min-width: 768px) {
+    .device-card-modern {
+        padding: 2rem;
+    }
+}
+
+.device-card-modern:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    border-color: #ffb300;
+}
+
+.device-card-modern.selected {
+    border-color: #27ae60;
+    box-shadow: 0 0 0 4px rgba(39, 174, 96, 0.3);
+    background: linear-gradient(135deg, #ffffff, #f8fff8);
+}
+
+/* Custom SVG Icon Styles */
+.icon-svg {
+    width: 256px;
+    /*height: 96px;*/
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.text-primary-text {
+    color: #2d3748;
+}
+
+/* Device Info */
+.device-name {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #2d3748;
+    margin: 1rem 0 0.5rem 0;
+    text-align: center;
+}
+
+.device-subtitle {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.device-type {
+    font-size: 0.875rem;
+    color: #666;
+    font-weight: 500;
+}
+
+.device-location {
+    font-size: 0.75rem;
+    color: #888;
+}
+
+/* Status Indicator */
+.device-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: 1rem;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.device-status.active .status-dot {
+    background-color: #22c55e;
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+}
+
+.device-status.inactive .status-dot {
+    background-color: #ef4444;
+}
+
+.device-status.active {
+    color: #22c55e;
+}
+
+.device-status.inactive {
+    color: #ef4444;
+}
+
+/* Action Buttons */
+.device-actions-modern {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: auto;
+}
+
+.action-btn {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 1rem;
+}
+
+.action-btn:hover {
+    background: #e9ecef;
+    transform: scale(1.1);
+}
+
+.edit-btn-modern:hover {
+    background: #fff3cd;
+    border-color: #ffc107;
+}
+
+.delete-btn-modern:hover {
+    background: #f8d7da;
+    border-color: #dc3545;
+}
+
+/* Selection Indicator */
+.selection-indicator {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    background: #27ae60;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 0 12px 0 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
+}
+
+/* Error Message */
+.error-message-modern {
+    background: #fee;
+    color: #c53030;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    border-left: 4px solid #e53e3e;
+}
+
+/* No Devices State */
+.no-devices-modern {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 400px;
+}
+
+.empty-state-card {
+    background: white;
+    border-radius: 1rem;
+    padding: 3rem 2rem;
+    text-align: center;
+    border: 4px solid #ffc107;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    max-width: 400px;
+}
+
+.empty-state-card h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #2d3748;
+    margin: 0 0 0.5rem 0;
+}
+
+.empty-state-card p {
+    color: #666;
+    margin-bottom: 1.5rem;
+}
+
+.register-first-btn-modern {
+    background: linear-gradient(135deg, #ffc107, #ffb300);
+    color: #2d3748;
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(255, 193, 7, 0.3);
+}
+
+.register-first-btn-modern:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 193, 7, 0.4);
+}
+
+/* Footer Bar */
+.my-devices-footer {
+    background-color: #e53e3e; /* Red footer color */
+    color: white;
+    padding: 1rem;
+    text-align: center;
+}
+
+.my-devices-footer p {
+    font-size: 1.125rem;
+    font-weight: bold;
+    letter-spacing: 0.1em;
+    margin: 0;
+}
+
+.my-devices-footer span {
+    font-size: 1.25rem;
+    margin-right: 0.5rem;
+}
+
+/* Legacy Device Manager Styles (for compatibility) */
 .device-manager-header {
   display: flex;
   justify-content: space-between;

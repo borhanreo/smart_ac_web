@@ -6,14 +6,16 @@ import ScheduleManager from "./components/ScheduleManager";
 import StatusMonitor from "./components/StatusMonitor";
 import DeviceManager from "./components/DeviceManager";
 import DeviceRegistration from "./components/DeviceRegistration";
+import DeviceStatusPage from "./pages/DeviceStatusPage";
 import { auth } from "./firebase";
 import "./styles.css";
 
 function App() {
   const [user, setUser] = useState(null);
   const [mqttData, setMqttData] = useState({});
-  const [currentView, setCurrentView] = useState('devices'); // 'devices', 'register', 'control'
+  const [currentView, setCurrentView] = useState('devices'); // 'devices', 'register', 'control', 'status'
   const [selectedDevice, setSelectedDevice] = useState(null);
+  const [devices, setDevices] = useState([]);
 
   useEffect(() => {
     // Listen for auth state changes
@@ -68,6 +70,12 @@ function App() {
             >
               My Devices
             </button>
+            <button 
+              className={currentView === 'status' ? 'active' : ''}
+              onClick={() => setCurrentView('status')}
+            >
+              📊 Status Monitor
+            </button>
             {selectedDevice && (
               <button 
                 className={currentView === 'control' ? 'active' : ''}
@@ -88,7 +96,12 @@ function App() {
           <DeviceManager 
             onSelectDevice={handleDeviceSelect}
             onRegisterNew={() => setCurrentView('register')}
+            onDevicesLoaded={setDevices}
           />
+        )}
+
+        {currentView === 'status' && (
+          <DeviceStatusPage />
         )}
 
         {currentView === 'register' && (
@@ -106,7 +119,16 @@ function App() {
             </div>
             <ControlPanel selectedDevice={selectedDevice} />
             <ScheduleManager selectedDevice={selectedDevice} />
-            <StatusMonitor mqttData={mqttData} selectedDevice={selectedDevice} />
+            <StatusMonitor 
+              devices={selectedDevice ? [selectedDevice] : []}
+              onDeviceUpdate={(macAddress, isOnline, deviceData) => {
+                console.log(`Control Panel: Device ${macAddress} status changed to ${isOnline ? 'online' : 'offline'}`);
+                // Update the selected device status
+                if (selectedDevice && selectedDevice.macAddress === macAddress) {
+                  setSelectedDevice({...selectedDevice, isActive: isOnline, lastSeen: new Date()});
+                }
+              }}
+            />
           </div>
         )}
       </main>
