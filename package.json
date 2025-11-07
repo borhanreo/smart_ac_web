@@ -3,10 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
+    "@yudiel/react-qr-scanner": "^2.4.1",
     "firebase": "^10.1.0",
     "mqtt": "^5.3.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-qr-barcode-scanner": "^2.1.17",
     "react-scripts": "5.0.1"
   },
   "scripts": {

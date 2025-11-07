@@ -71,7 +71,166 @@
   margin: 0 auto;
 }
 
-/* Legacy Panel Styles */
+/* AC Remote Control Styles - Matching HTML Design */
+:root {
+    --remote-bg: #ffffff;
+    --screen-bg: #808080; /* Darker gray for the LCD */
+    --screen-text: #000000;
+    --button-main: #f0f0f0; /* Light gray button background */
+    --button-shadow: rgba(0, 0, 0, 0.1);
+    --red-power: #e53e3e;
+}
+
+.remote-body {
+    width: 300px;
+    max-width: 90%;
+    background-color: var(--remote-bg);
+    border-radius: 35px; /* Highly rounded corners */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    padding: 20px 20px 35px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 1rem auto;
+    font-family: 'Inter', sans-serif;
+}
+
+.screen {
+    width: 90%;
+    height: 80px;
+    background-color: var(--screen-bg);
+    border-radius: 10px;
+    margin-bottom: 25px;
+    padding: 5px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.4);
+    color: var(--screen-text);
+    text-shadow: 0 0 1px #fff; /* Slight text softening */
+    overflow: hidden;
+}
+
+/* LCD Font Simulation */
+.temp-text {
+    font-size: 3rem;
+    line-height: 1;
+    font-weight: 700;
+    margin-top: -5px;
+}
+
+.icon-row {
+    display: flex;
+    justify-content: space-between;
+    width: 95%;
+    font-size: 1.2rem;
+    opacity: 0.8;
+    margin-bottom: 5px;
+}
+
+/* The main buttons grid */
+.buttons-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr; /* Three columns */
+    gap: 15px;
+    width: 100%;
+}
+
+.button {
+    background-color: var(--button-main);
+    color: #333;
+    border: none;
+    padding: 10px 5px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 3px 5px var(--button-shadow), inset 0 -2px 0 rgba(0, 0, 0, 0.1);
+    transition: all 0.1s ease-out;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.button:hover {
+    background-color: #e0e0e0;
+    transform: translateY(-1px);
+    box-shadow: 0 5px 8px var(--button-shadow);
+}
+
+.button:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 3px var(--button-shadow);
+    background-color: #d0d0d0;
+}
+
+/* Specific styles for directional/arrow buttons */
+.arrow-button {
+    padding: 5px;
+    border-radius: 50%;
+    height: 50px;
+    width: 50px;
+    font-size: 1.5rem;
+    position: relative;
+}
+
+/* Custom alignment for 2-column sections */
+.row-two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    width: 100%;
+    margin-bottom: 15px;
+}
+
+.power-btn {
+    background-color: var(--button-main);
+    color: var(--red-power);
+    border: 2px solid var(--red-power);
+    font-size: 1.5rem;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    padding: 0;
+    box-shadow: 0 4px 6px rgba(229, 62, 62, 0.3);
+    grid-column: 1 / span 1; /* First column */
+}
+
+.mode-btn {
+    grid-column: 2 / span 1;
+}
+
+/* Utility class to center the single column button blocks */
+.center-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+/* Styling for the lock icon */
+.lock-icon {
+    font-size: 1.2rem;
+    color: #333;
+    position: absolute;
+    right: 5px;
+    top: 5px;
+}
+
+/* Text utility classes */
+.text-xs {
+    font-size: 0.75rem;
+}
+
+.font-semibold {
+    font-weight: 600;
+}
+
+/* Legacy Panel Styles (for compatibility) */
 .panel {
   border: 1px solid #ddd;
   border-radius: 10px;
@@ -169,6 +328,577 @@ button:disabled {
   color: #6c757d;
   font-size: 12px;
   margin-top: 0.25rem;
+}
+
+/* MAC Address Validation Styles */
+.mac-input.invalid {
+  border-color: #dc3545;
+  background-color: #fff5f5;
+}
+
+.mac-validation-feedback {
+  margin-top: 0.5rem;
+  font-size: 12px;
+}
+
+.mac-validation-feedback .checking {
+  color: #007bff;
+  font-weight: 500;
+}
+
+.mac-validation-feedback .valid {
+  color: #28a745;
+  font-weight: 500;
+}
+
+.mac-validation-feedback .invalid {
+  color: #dc3545;
+  font-weight: 500;
+}
+
+/* MAC Input Container Styles */
+.mac-input-container {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.mac-input-container .mac-input {
+  flex: 1;
+}
+
+.mac-input-buttons {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.scan-button {
+  background: #17a2b8;
+  border-color: #17a2b8;
+  color: white;
+  padding: 0.75rem 1rem;
+  font-size: 14px;
+  white-space: nowrap;
+  min-width: 80px;
+}
+
+.scan-button:hover:not(:disabled) {
+  background: #138496;
+  border-color: #117a8b;
+}
+
+.scan-button:disabled {
+  background: #6c757d;
+  border-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.input-method-info {
+  margin-top: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.input-method-info small {
+  color: #007bff;
+  font-style: italic;
+}
+
+/* Scanner Modal Styles */
+.scanner-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+.scanner-modal-content {
+  background: white;
+  border-radius: 12px;
+  padding: 0;
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.scanner-header {
+  background: #007bff;
+  color: white;
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.scanner-header h3 {
+  margin: 0;
+}
+
+.scanner-header .close-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.scanner-start {
+  padding: 2rem;
+  text-align: center;
+}
+
+.scanner-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin: 1.5rem 0;
+}
+
+.start-camera-btn {
+  background: #28a745;
+  border-color: #28a745;
+  padding: 1rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.start-camera-btn:hover {
+  background: #218838;
+}
+
+.manual-input-btn {
+  background: #6c757d;
+  border-color: #6c757d;
+  padding: 1rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.manual-input-btn:hover {
+  background: #545b62;
+}
+
+.scanner-help {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: left;
+  margin-top: 1rem;
+}
+
+.scanner-help h4 {
+  margin: 0 0 0.5rem 0;
+  color: #495057;
+}
+
+.scanner-help ul {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.scanner-help li {
+  margin: 0.25rem 0;
+  color: #6c757d;
+}
+
+/* Camera Scanner Styles */
+.scanner-camera {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.scanner-video {
+  width: 100%;
+  max-height: 400px;
+  object-fit: cover;
+}
+
+.scanner-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+}
+
+.scan-frame {
+  width: 200px;
+  height: 200px;
+  border: 3px solid #00ff00;
+  border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+  position: relative;
+}
+
+.scan-frame::before,
+.scan-frame::after {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border: 3px solid #00ff00;
+}
+
+.scan-frame::before {
+  top: -3px;
+  left: -3px;
+  border-right: none;
+  border-bottom: none;
+}
+
+.scan-frame::after {
+  bottom: -3px;
+  right: -3px;
+  border-left: none;
+  border-top: none;
+}
+
+.scanner-overlay p {
+  color: white;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  margin-top: 1rem;
+  font-weight: 500;
+}
+
+.scanner-controls {
+  padding: 1rem;
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  background: #f8f9fa;
+}
+
+.capture-btn {
+  background: #ffc107;
+  border-color: #ffc107;
+  color: #212529;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+}
+
+.capture-btn:hover {
+  background: #e0a800;
+  border-color: #d39e00;
+}
+
+.stop-btn {
+  background: #dc3545;
+  border-color: #dc3545;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+}
+
+.stop-btn:hover {
+  background: #c82333;
+  border-color: #bd2130;
+}
+
+/* Manual Input Mode */
+.manual-input-mode {
+  padding: 2rem;
+}
+
+.manual-input-mode h4 {
+  margin: 0 0 1rem 0;
+  color: #333;
+}
+
+.manual-mac-input {
+  width: 100%;
+  margin: 1rem 0;
+}
+
+.mac-manual-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e1e5e9;
+  border-radius: 8px;
+  font-size: 16px;
+  text-align: center;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 1px;
+}
+
+.mac-manual-input:focus {
+  outline: none;
+  border-color: #007bff;
+}
+
+.manual-input-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.manual-input-buttons .submit-btn {
+  background: #28a745;
+  border-color: #28a745;
+  min-width: 120px;
+}
+
+.manual-input-buttons .submit-btn:hover {
+  background: #218838;
+}
+
+/* Simple MAC Scanner Styles */
+.scanner-body {
+  padding: 1.5rem;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.input-method-selection h4 {
+  margin: 0 0 1.5rem 0;
+  color: #333;
+  text-align: center;
+}
+
+.method-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.method-btn {
+  padding: 1rem;
+  border: 2px solid #e1e5e9;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  transition: all 0.3s;
+}
+
+.method-btn:hover {
+  border-color: #007bff;
+  background: #f8f9fa;
+}
+
+.method-btn.active {
+  border-color: #007bff;
+  background: #e3f2fd;
+  color: #007bff;
+}
+
+.manual-input-section {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.manual-input-section label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.mac-input-field {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e1e5e9;
+  border-radius: 8px;
+  font-size: 16px;
+  font-family: 'Courier New', monospace;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+.mac-input-field:focus {
+  outline: none;
+  border-color: #007bff;
+  background: white;
+}
+
+.format-help {
+  margin: 0.5rem 0 1.5rem 0;
+  text-align: center;
+}
+
+.format-help small {
+  color: #6c757d;
+  font-style: italic;
+}
+
+.submit-section {
+  text-align: center;
+}
+
+.submit-mac-btn {
+  background: #28a745;
+  border-color: #28a745;
+  color: white;
+  padding: 0.75rem 2rem;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 8px;
+  min-width: 180px;
+}
+
+.submit-mac-btn:hover:not(:disabled) {
+  background: #218838;
+  border-color: #1e7e34;
+}
+
+.submit-mac-btn:disabled {
+  background: #6c757d;
+  border-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.post-capture-input {
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.post-capture-input h4 {
+  margin: 0 0 0.5rem 0;
+  color: #333;
+}
+
+.post-capture-input p {
+  margin: 0 0 1.5rem 0;
+  color: #6c757d;
+}
+
+.post-capture-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+.back-btn {
+  background: #6c757d;
+  border-color: #6c757d;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+}
+
+.back-btn:hover {
+  background: #545b62;
+  border-color: #4e555b;
+}
+
+.processing {
+  text-align: center;
+  padding: 2rem;
+  color: #007bff;
+  font-size: 18px;
+}
+
+.help-section {
+  background: #e8f4fd;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-top: 2rem;
+}
+
+.help-section h4 {
+  margin: 0 0 1rem 0;
+  color: #0056b3;
+}
+
+.help-section ol {
+  padding-left: 1.5rem;
+  margin: 1rem 0;
+}
+
+.help-section ul {
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.help-section li {
+  margin: 0.5rem 0;
+  color: #333;
+}
+
+.code-example {
+  background: #2d3748;
+  color: #e2e8f0;
+  padding: 1rem;
+  border-radius: 6px;
+  font-size: 12px;
+  overflow-x: auto;
+  margin: 1rem 0;
+  border: none;
+}
+
+/* Responsive Design for Scanner */
+@media (max-width: 768px) {
+  .scanner-modal-content {
+    width: 95%;
+    max-height: 95vh;
+  }
+  
+  .scanner-buttons {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .start-camera-btn,
+  .manual-input-btn {
+    width: 100%;
+    max-width: 250px;
+  }
+  
+  .scan-frame {
+    width: 150px;
+    height: 150px;
+  }
+  
+  .scanner-controls {
+    flex-direction: column;
+  }
+  
+  .mac-input-container {
+    flex-direction: column;
+  }
+  
+  .scan-button {
+    margin-top: 0.5rem;
+  }
+
+  .method-buttons {
+    grid-template-columns: 1fr;
+  }
+  
+  .post-capture-buttons {
+    flex-direction: column;
+  }
+  
+  .back-btn,
+  .submit-mac-btn {
+    width: 100%;
+  }
 }
 
 .form-actions {
@@ -498,5 +1228,564 @@ button:disabled {
   
   .modal-actions {
     flex-direction: column;
+  }
+}
+
+/* Camera Scanner Modal Styles */
+.camera-scanner-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+.camera-scanner-modal {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.camera-scanner-modal .scanner-header {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.camera-scanner-modal .scanner-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.camera-scanner-modal .scanner-header .close-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  font-size: 1.5rem;
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.camera-scanner-modal .scanner-header .close-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.camera-scanner-modal .scanner-content {
+  padding: 1.5rem;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.scanner-start-screen {
+  text-align: center;
+}
+
+.scanner-instructions {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+.scanner-instructions h4 {
+  margin: 0 0 0.5rem 0;
+  color: #333;
+}
+
+.scanner-instructions ul {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.scanner-instructions li {
+  margin: 0.3rem 0;
+  color: #555;
+  font-size: 14px;
+}
+
+.scanner-start-screen .scanner-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.scanner-start-screen .start-camera-btn {
+  background: #28a745;
+  border-color: #28a745;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 8px;
+  min-width: 140px;
+}
+
+.scanner-start-screen .start-camera-btn:hover {
+  background: #218838;
+  border-color: #1e7e34;
+}
+
+.scanner-start-screen .manual-btn {
+  background: #6c757d;
+  border-color: #6c757d;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 8px;
+  min-width: 140px;
+}
+
+.scanner-start-screen .manual-btn:hover {
+  background: #545b62;
+  border-color: #4e555b;
+}
+
+/* Camera Scanner Container */
+.camera-scanner-container {
+  position: relative;
+}
+
+.scanner-viewfinder {
+  position: relative;
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+  height: 300px;
+}
+
+.camera-scanner-container .scanner-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+}
+
+.scan-area {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  border: 2px solid #00ff00;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 255, 0, 0.1);
+}
+
+.scan-area p {
+  color: white;
+  font-weight: bold;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  margin: 0;
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 4px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.scan-corners {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+.scan-corners::before,
+.scan-corners::after {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border: 3px solid #00ff00;
+}
+
+.scan-corners::before {
+  top: -2px;
+  left: -2px;
+  border-right: none;
+  border-bottom: none;
+}
+
+.scan-corners::after {
+  bottom: -2px;
+  right: -2px;
+  border-left: none;
+  border-top: none;
+}
+
+.camera-scanner-container .scanner-controls {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.camera-scanner-container .stop-btn {
+  background: #dc3545;
+  border-color: #dc3545;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  border-radius: 8px;
+}
+
+.camera-scanner-container .stop-btn:hover {
+  background: #c82333;
+  border-color: #bd2130;
+}
+
+.switch-manual-btn {
+  background: #17a2b8;
+  border-color: #17a2b8;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  border-radius: 8px;
+}
+
+.switch-manual-btn:hover {
+  background: #138496;
+  border-color: #117a8b;
+}
+
+/* Manual Input Section */
+.camera-scanner-modal .manual-input-section {
+  text-align: center;
+}
+
+.camera-scanner-modal .manual-input-section h4 {
+  margin: 0 0 0.5rem 0;
+  color: #333;
+}
+
+.camera-scanner-modal .manual-input-section p {
+  margin: 0 0 1.5rem 0;
+  color: #6c757d;
+}
+
+.camera-scanner-modal .manual-mac-input {
+  width: 100%;
+  max-width: 300px;
+  padding: 0.75rem;
+  font-size: 18px;
+  font-family: 'Courier New', monospace;
+  text-align: center;
+  border: 2px solid #e1e5e9;
+  border-radius: 8px;
+  letter-spacing: 2px;
+  margin-bottom: 1.5rem;
+}
+
+.camera-scanner-modal .manual-mac-input:focus {
+  outline: none;
+  border-color: #007bff;
+  background: #f8f9ff;
+}
+
+.camera-scanner-modal .manual-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.camera-scanner-modal .back-btn {
+  background: #6c757d;
+  border-color: #6c757d;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+}
+
+.camera-scanner-modal .back-btn:hover {
+  background: #545b62;
+}
+
+.camera-scanner-modal .submit-btn {
+  background: #28a745;
+  border-color: #28a745;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  min-width: 120px;
+}
+
+.camera-scanner-modal .submit-btn:hover:not(:disabled) {
+  background: #218838;
+}
+
+.camera-scanner-modal .submit-btn:disabled {
+  background: #6c757d;
+  border-color: #6c757d;
+  cursor: not-allowed;
+}
+
+/* Help Info */
+.help-info {
+  margin-top: 2rem;
+  border-top: 1px solid #e9ecef;
+  padding-top: 1rem;
+}
+
+.help-info details {
+  cursor: pointer;
+}
+
+.help-info summary {
+  font-weight: 600;
+  color: #007bff;
+  padding: 0.5rem 0;
+}
+
+.help-info summary:hover {
+  color: #0056b3;
+}
+
+.help-content {
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+  margin-top: 0.5rem;
+  text-align: left;
+}
+
+.help-content p {
+  margin: 0.5rem 0;
+  font-weight: 600;
+}
+
+.help-content ul {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.help-content li {
+  margin: 0.3rem 0;
+  color: #555;
+  font-size: 14px;
+}
+
+.help-content pre {
+  background: #2d3748;
+  color: #e2e8f0;
+  padding: 0.75rem;
+  border-radius: 4px;
+  font-size: 12px;
+  overflow-x: auto;
+  margin: 0.5rem 0;
+}
+
+/* Camera Scanner Error Message */
+.camera-scanner-modal .error-message {
+  background: #f8d7da;
+  color: #721c24;
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #f5c6cb;
+  margin-bottom: 1rem;
+  font-size: 14px;
+}
+
+/* Responsive Design for Camera Scanner */
+@media (max-width: 768px) {
+  .camera-scanner-modal {
+    width: 95%;
+    margin: 1rem;
+  }
+  
+  .scanner-start-screen .scanner-buttons,
+  .camera-scanner-container .scanner-controls,
+  .camera-scanner-modal .manual-buttons {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .scanner-start-screen .start-camera-btn,
+  .scanner-start-screen .manual-btn,
+  .camera-scanner-container .stop-btn,
+  .switch-manual-btn,
+  .camera-scanner-modal .back-btn,
+  .camera-scanner-modal .submit-btn {
+    width: 100%;
+    max-width: 250px;
+  }
+  
+  .scan-area {
+    width: 150px;
+    height: 150px;
+  }
+  
+  .camera-scanner-modal .manual-mac-input {
+    font-size: 16px;
+  }
+}
+
+/* Additional Scanner Styles */
+.capture-btn {
+  background: #ffc107;
+  border-color: #ffc107;
+  color: #212529;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  border-radius: 8px;
+}
+
+.capture-btn:hover {
+  background: #e0a800;
+  border-color: #d39e00;
+}
+
+.scanner-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 2rem;
+}
+
+.scanner-fallback p {
+  color: #6c757d;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.fallback-manual-btn {
+  background: #007bff;
+  border-color: #007bff;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+}
+
+.fallback-manual-btn:hover {
+  background: #0056b3;
+  border-color: #004085;
+}
+
+/* Capture Mode Styles */
+.capture-instructions {
+  background: linear-gradient(135deg, #e3f2fd, #f3e5f5);
+  border: 2px solid #2196f3;
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.capture-instructions p {
+  margin: 0;
+  color: #1565c0;
+  font-size: 14px;
+}
+
+.primary-action {
+  background: #ff9800 !important;
+  border-color: #ff9800 !important;
+  color: white !important;
+  font-weight: bold !important;
+  box-shadow: 0 2px 4px rgba(255, 152, 0, 0.3) !important;
+}
+
+.primary-action:hover {
+  background: #f57c00 !important;
+  border-color: #ef6c00 !important;
+  box-shadow: 0 4px 8px rgba(255, 152, 0, 0.4) !important;
+}
+
+/* Captured Image Section */
+.captured-image-section {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.captured-image-section p {
+  color: #28a745;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.image-preview {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.format-examples {
+  margin-top: 0.5rem;
+  margin-bottom: 1rem;
+  text-align: center;
+  padding: 0.5rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.format-examples small {
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* Enhanced Scanner Controls */
+.scanner-controls {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  padding: 1rem;
+  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+  border-radius: 0 0 8px 8px;
+}
+
+.scanner-controls button {
+  flex: 1;
+  min-width: 120px;
+  max-width: 180px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .scanner-controls {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .scanner-controls button {
+    width: 100%;
+    max-width: 250px;
+    margin-bottom: 0.5rem;
+  }
+  
+  .capture-instructions {
+    font-size: 13px;
+    padding: 0.5rem;
   }
 }

@@ -107,7 +107,7 @@ export const checkDeviceExists = async (macAddress) => {
   try {
     const q = query(
       collection(db, DEVICES_COLLECTION),
-      where('macAddress', '==', macAddress)
+      where('macAddress', '==', macAddress.toUpperCase())
     );
     
     const querySnapshot = await getDocs(q);
@@ -115,5 +115,35 @@ export const checkDeviceExists = async (macAddress) => {
   } catch (error) {
     console.error('Error checking device existence:', error);
     return false;
+  }
+};
+
+// Get detailed information about existing device (without exposing sensitive user data)
+export const getDeviceInfo = async (macAddress) => {
+  try {
+    const q = query(
+      collection(db, DEVICES_COLLECTION),
+      where('macAddress', '==', macAddress.toUpperCase())
+    );
+    
+    const querySnapshot = await getDocs(q);
+    if (querySnapshot.empty) {
+      return { exists: false };
+    }
+    
+    const deviceDoc = querySnapshot.docs[0];
+    const deviceData = deviceDoc.data();
+    
+    // Return limited info for privacy
+    return {
+      exists: true,
+      deviceType: deviceData.deviceType,
+      registeredAt: deviceData.createdAt,
+      isActive: deviceData.isActive,
+      // Don't return userId or other sensitive info
+    };
+  } catch (error) {
+    console.error('Error getting device info:', error);
+    return { exists: false, error: error.message };
   }
 };

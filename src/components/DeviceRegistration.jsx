@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { registerDevice, checkDeviceExists } from '../services/deviceService';
+import { registerDevice, checkDeviceExists, getDeviceInfo } from '../services/deviceService';
 import { auth } from '../firebase';
+import FallbackBarcodeScanner from './FallbackBarcodeScanner';
 
 const DeviceRegistration = ({ onDeviceRegistered, onCancel }) => {
   const [formData, setFormData] = useState({
@@ -13,6 +14,12 @@ const DeviceRegistration = ({ onDeviceRegistered, onCancel }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [macValidation, setMacValidation] = useState({
+    isValid: true,
+    isChecking: false,
+    message: ''
+  });
+  const [showScanner, setShowScanner] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -20,12 +27,80 @@ const DeviceRegistration = ({ onDeviceRegistered, onCancel }) => {
       ...prev,
       [name]: value
     }));
+
+    // Real-time MAC address validation
+    if (name === 'macAddress') {
+      // Clear any existing errors
+      setError('');
+      // Debounce the validation check
+      setTimeout(() => validateAndCheckMacAddress(value), 500);
+    }
   };
 
   const validateMacAddress = (mac) => {
     // MAC address validation (XX:XX:XX:XX:XX:XX format)
     const macRegex = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/;
     return macRegex.test(mac);
+  };
+
+  // Handle scanned MAC address
+  const handleScanSuccess = (scannedMac) => {
+    setFormData(prev => ({
+      ...prev,
+      macAddress: scannedMac
+    }));
+    setShowScanner(false);
+    // Validate the scanned MAC address
+    validateAndCheckMacAddress(scannedMac);
+  };
+
+  // Handle scanner close
+  const handleScannerClose = () => {
+    setShowScanner(false);
+  };
+
+  // Real-time MAC address validation and checking
+  const validateAndCheckMacAddress = async (mac) => {
+    if (!mac.trim()) {
+      setMacValidation({ isValid: true, isChecking: false, message: '' });
+      return;
+    }
+
+    // First check format
+    if (!validateMacAddress(mac)) {
+      setMacValidation({
+        isValid: false,
+        isChecking: false,
+        message: 'Invalid MAC address format. Use XX:XX:XX:XX:XX:XX'
+      });
+      return;
+    }
+
+    // Check if already registered
+    setMacValidation({ isValid: true, isChecking: true, message: 'Checking availability...' });
+    
+    try {
+      const deviceInfo = await getDeviceInfo(mac.toUpperCase().trim());
+      if (deviceInfo.exists) {
+        setMacValidation({
+          isValid: false,
+          isChecking: false,
+          message: `❌ This ${deviceInfo.deviceType || 'device'} is already registered by another user`
+        });
+      } else {
+        setMacValidation({
+          isValid: true,
+          isChecking: false,
+          message: '✅ MAC address is available for registration'
+        });
+      }
+    } catch (error) {
+      setMacValidation({
+        isValid: true,
+        isChecking: false,
+        message: '⚠️ Could not verify availability. Please try again.'
+      });
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -59,11 +134,18 @@ const DeviceRegistration = ({ onDeviceRegistered, onCancel }) => {
       return;
     }
 
+    // Additional validation: check if MAC validation failed
+    if (!macValidation.isValid) {
+      setError('Please fix the MAC address issues before proceeding');
+      setLoading(false);
+      return;
+    }
+
     try {
-      // Check if device already exists
-      const deviceExists = await checkDeviceExists(formData.macAddress);
+      // Double-check if device already exists (final validation)
+      const deviceExists = await checkDeviceExists(formData.macAddress.toUpperCase().trim());
       if (deviceExists) {
-        setError('This device is already registered by another user');
+        setError('❌ This device MAC address is already registered. Each device can only be registered once.');
         setLoading(false);
         return;
       }
@@ -118,17 +200,45 @@ const DeviceRegistration = ({ onDeviceRegistered, onCancel }) => {
 
           <div className="form-group">
             <label htmlFor="macAddress">MAC Address *</label>
-            <input
-              type="text"
-              id="macAddress"
-              name="macAddress"
-              value={formData.macAddress}
-              onChange={handleInputChange}
-              placeholder="XX:XX:XX:XX:XX:XX"
-              pattern="^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$"
-              required
-            />
-            <small>Enter the MAC address of your ESP32 device</small>
+            <div className="mac-input-container">
+              <input
+                type="text"
+                id="macAddress"
+                name="macAddress"
+                value={formData.macAddress}
+                onChange={handleInputChange}
+                placeholder="XX:XX:XX:XX:XX:XX"
+                pattern="^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$"
+                className={`mac-input ${!macValidation.isValid ? 'invalid' : ''}`}
+                required
+              />
+              <div className="mac-input-buttons">
+                <button
+                  type="button"
+                  onClick={() => setShowScanner(true)}
+                  className="scan-button"
+                  disabled={loading}
+                >
+                  📷 Scan
+                </button>
+              </div>
+            </div>
+            <div className="input-method-info">
+              <small>💡 You can type manually or scan a barcode/QR code containing the MAC address</small>
+            </div>
+            <div className="mac-validation-feedback">
+              {macValidation.isChecking && (
+                <span className="checking">🔄 Checking MAC address...</span>
+              )}
+              {!macValidation.isChecking && macValidation.message && (
+                <span className={macValidation.isValid ? 'valid' : 'invalid'}>
+                  {macValidation.message}
+                </span>
+              )}
+              {!macValidation.message && !macValidation.isChecking && (
+                <small>Enter the MAC address of your Air Condition device</small>
+              )}
+            </div>
           </div>
 
           <div className="form-group">
@@ -212,6 +322,13 @@ void loop() {
           </ol>
         </div>
       </div>
+
+      {/* MAC Address Scanner Modal */}
+      <FallbackBarcodeScanner
+        isOpen={showScanner}
+        onScanSuccess={handleScanSuccess}
+        onClose={handleScannerClose}
+      />
     </div>
   );
 };
