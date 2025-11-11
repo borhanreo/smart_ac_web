@@ -65,6 +65,11 @@ Before running this application, ensure you have:
    REACT_APP_MQTT_USERNAME=your_mqtt_user
    REACT_APP_MQTT_PASSWORD=your_mqtt_password
    REACT_APP_MQTT_TOPIC_BASE=device/ac01
+
+   # Device Status Monitoring Configuration
+   REACT_APP_DEVICE_STATUS_INTERVAL=30000
+   REACT_APP_DEVICE_OFFLINE_TIMEOUT=90000
+   REACT_APP_DEVICE_STATUS_CHECK_INTERVAL=5000
    ```
 
 ## Configuration
@@ -76,7 +81,7 @@ Before running this application, ensure you have:
 3. Get your Firebase config from Project Settings
 4. Update the environment variables with your Firebase credentials
 
-### MQTT Broker Setup
+### MQTT Broker Setup we have used EMQX
 
 1. Set up an MQTT broker with WebSocket support (e.g., Mosquitto, HiveMQ)
 2. Ensure WebSocket port is accessible (typically 8083 for WSS)

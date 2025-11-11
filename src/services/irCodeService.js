@@ -14,10 +14,32 @@ import { db } from '../firebase';
 // Collection name for IR codes
 const IR_CODES_COLLECTION = 'irCodes';
 
-// AC function types that can be learned
-export const AC_FUNCTIONS = {
+// AC Brands list
+export const AC_BRANDS = [
+  'LG',
+  'Samsung',
+  'Daikin',
+  'Mitsubishi',
+  'Panasonic',
+  'Carrier',
+  'Toshiba',
+  'Fujitsu',
+  'Hitachi',
+  'Sharp',
+  'Gree',
+  'Midea',
+  'Haier',
+  'TCL',
+  'Voltas',
+  'Blue Star',
+  'Other'
+];
+
+// IR Command types for AC
+export const IR_COMMANDS = {
   POWER_ON: 'power_on',
   POWER_OFF: 'power_off',
+  POWER_TOGGLE: 'power_toggle',
   TEMP_UP: 'temp_up',
   TEMP_DOWN: 'temp_down',
   MODE_COOL: 'mode_cool',
@@ -35,190 +57,180 @@ export const AC_FUNCTIONS = {
   SLEEP: 'sleep'
 };
 
-// Popular AC brands
-export const AC_BRANDS = [
-  'Daikin', 'Mitsubishi', 'LG', 'Samsung', 'Panasonic', 'Carrier', 
-  'Toshiba', 'Sharp', 'Hitachi', 'Fujitsu', 'Haier', 'Gree', 
-  'Midea', 'TCL', 'Voltas', 'Blue Star', 'Godrej', 'Whirlpool', 'Other'
-];
+// Command labels for UI
+export const COMMAND_LABELS = {
+  [IR_COMMANDS.POWER_ON]: '⚡ Power On',
+  [IR_COMMANDS.POWER_OFF]: '⭕ Power Off',
+  [IR_COMMANDS.POWER_TOGGLE]: '🔄 Power Toggle',
+  [IR_COMMANDS.TEMP_UP]: '🌡️ Temperature Up',
+  [IR_COMMANDS.TEMP_DOWN]: '🌡️ Temperature Down',
+  [IR_COMMANDS.MODE_COOL]: '❄️ Cool Mode',
+  [IR_COMMANDS.MODE_HEAT]: '🔥 Heat Mode',
+  [IR_COMMANDS.MODE_FAN]: '🌪️ Fan Mode',
+  [IR_COMMANDS.MODE_DRY]: '💨 Dry Mode',
+  [IR_COMMANDS.MODE_AUTO]: '🤖 Auto Mode',
+  [IR_COMMANDS.FAN_LOW]: '💨 Fan Low',
+  [IR_COMMANDS.FAN_MED]: '💨 Fan Medium',
+  [IR_COMMANDS.FAN_HIGH]: '💨 Fan High',
+  [IR_COMMANDS.FAN_AUTO]: '🤖 Fan Auto',
+  [IR_COMMANDS.SWING_ON]: '↔️ Swing On',
+  [IR_COMMANDS.SWING_OFF]: '↔️ Swing Off',
+  [IR_COMMANDS.TIMER]: '⏰ Timer',
+  [IR_COMMANDS.SLEEP]: '😴 Sleep'
+};
 
-// Save learned IR code to Firebase
-export const saveIRCode = async (deviceId, acBrand, functionType, irCode, rawData = null) => {
+// Save IR code for a device
+export const saveIRCode = async (deviceId, macAddress, brand, command, irCode, protocol = 'NEC') => {
   try {
     const irCodeDoc = {
-      deviceId: deviceId,
-      acBrand: acBrand,
-      functionType: functionType,
-      irCode: irCode,
-      rawData: rawData, // Raw IR signal data
-      protocol: rawData?.protocol || 'unknown',
-      bits: rawData?.bits || 0,
-      learnedAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-      isActive: true
+      deviceId,
+      macAddress: macAddress.toUpperCase(),
+      brand,
+      command,
+      irCode,
+      protocol,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
     };
     
-    // Check if code already exists for this device/brand/function
-    const existingCode = await getIRCode(deviceId, acBrand, functionType);
-    
-    if (existingCode.success && existingCode.code) {
-      // Update existing code
-      const docRef = doc(db, IR_CODES_COLLECTION, existingCode.code.id);
-      await updateDoc(docRef, {
-        ...irCodeDoc,
-        updatedAt: serverTimestamp()
-      });
-      
-      return { 
-        success: true, 
-        codeId: existingCode.code.id, 
-        action: 'updated',
-        message: `Updated ${functionType} code for ${acBrand}` 
-      };
-    } else {
-      // Create new code
-      const docRef = await addDoc(collection(db, IR_CODES_COLLECTION), irCodeDoc);
-      return { 
-        success: true, 
-        codeId: docRef.id, 
-        action: 'created',
-        message: `Learned ${functionType} code for ${acBrand}` 
-      };
-    }
+    const docRef = await addDoc(collection(db, IR_CODES_COLLECTION), irCodeDoc);
+    return { success: true, id: docRef.id };
   } catch (error) {
     console.error('Error saving IR code:', error);
     return { success: false, error: error.message };
   }
 };
 
-// Get specific IR code
-export const getIRCode = async (deviceId, acBrand, functionType) => {
+// Get IR codes for a device
+export const getDeviceIRCodes = async (deviceId) => {
   try {
     const q = query(
       collection(db, IR_CODES_COLLECTION),
-      where('deviceId', '==', deviceId),
-      where('acBrand', '==', acBrand),
-      where('functionType', '==', functionType),
-      where('isActive', '==', true)
+      where('deviceId', '==', deviceId)
     );
     
     const querySnapshot = await getDocs(q);
+    const irCodes = [];
     
-    if (querySnapshot.empty) {
-      return { success: false, message: 'IR code not found' };
-    }
+    querySnapshot.forEach((doc) => {
+      irCodes.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
     
-    const codeDoc = querySnapshot.docs[0];
-    const codeData = { id: codeDoc.id, ...codeDoc.data() };
-    
-    return { success: true, code: codeData };
+    return { success: true, irCodes };
   } catch (error) {
-    console.error('Error getting IR code:', error);
-    return { success: false, error: error.message };
+    console.error('Error getting IR codes:', error);
+    return { success: false, error: error.message, irCodes: [] };
   }
 };
 
-// Get all IR codes for a device and brand
-export const getDeviceIRCodes = async (deviceId, acBrand = null) => {
+// Get IR codes by brand
+export const getIRCodesByBrand = async (brand) => {
   try {
-    let q;
-    if (acBrand) {
-      q = query(
-        collection(db, IR_CODES_COLLECTION),
-        where('deviceId', '==', deviceId),
-        where('acBrand', '==', acBrand),
-        where('isActive', '==', true)
-      );
-    } else {
-      q = query(
-        collection(db, IR_CODES_COLLECTION),
-        where('deviceId', '==', deviceId),
-        where('isActive', '==', true)
-      );
-    }
+    const q = query(
+      collection(db, IR_CODES_COLLECTION),
+      where('brand', '==', brand)
+    );
     
     const querySnapshot = await getDocs(q);
-    const codes = [];
+    const irCodes = [];
     
     querySnapshot.forEach((doc) => {
-      codes.push({ id: doc.id, ...doc.data() });
+      irCodes.push({
+        id: doc.id,
+        ...doc.data()
+      });
     });
     
-    // Group codes by function type for easy access
-    const groupedCodes = {};
-    codes.forEach(code => {
-      groupedCodes[code.functionType] = code;
-    });
-    
-    return { success: true, codes: codes, groupedCodes: groupedCodes };
+    return { success: true, irCodes };
   } catch (error) {
-    console.error('Error getting device IR codes:', error);
+    console.error('Error getting IR codes by brand:', error);
+    return { success: false, error: error.message, irCodes: [] };
+  }
+};
+
+// Update IR code
+export const updateIRCode = async (irCodeId, updates) => {
+  try {
+    const irCodeRef = doc(db, IR_CODES_COLLECTION, irCodeId);
+    await updateDoc(irCodeRef, {
+      ...updates,
+      updatedAt: serverTimestamp()
+    });
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating IR code:', error);
     return { success: false, error: error.message };
   }
 };
 
 // Delete IR code
-export const deleteIRCode = async (codeId) => {
+export const deleteIRCode = async (irCodeId) => {
   try {
-    const docRef = doc(db, IR_CODES_COLLECTION, codeId);
-    await updateDoc(docRef, { 
-      isActive: false, 
-      deletedAt: serverTimestamp() 
-    });
+    const irCodeRef = doc(db, IR_CODES_COLLECTION, irCodeId);
+    await deleteDoc(irCodeRef);
     
-    return { success: true, message: 'IR code deleted successfully' };
+    return { success: true };
   } catch (error) {
     console.error('Error deleting IR code:', error);
     return { success: false, error: error.message };
   }
 };
 
-// Get available brands for a device (brands that have learned codes)
-export const getAvailableBrands = async (deviceId) => {
+// Check if IR code exists for a command
+export const getIRCodeForCommand = async (deviceId, command) => {
   try {
     const q = query(
       collection(db, IR_CODES_COLLECTION),
       where('deviceId', '==', deviceId),
-      where('isActive', '==', true)
+      where('command', '==', command)
     );
     
     const querySnapshot = await getDocs(q);
-    const brands = new Set();
     
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      brands.add(data.acBrand);
-    });
+    if (querySnapshot.empty) {
+      return { success: false, exists: false };
+    }
     
-    return { success: true, brands: Array.from(brands).sort() };
+    const doc = querySnapshot.docs[0];
+    return {
+      success: true,
+      exists: true,
+      irCode: {
+        id: doc.id,
+        ...doc.data()
+      }
+    };
   } catch (error) {
-    console.error('Error getting available brands:', error);
-    return { success: false, error: error.message };
+    console.error('Error checking IR code:', error);
+    return { success: false, error: error.message, exists: false };
   }
 };
 
-// Bulk import IR codes (for pre-configured brand codes)
-export const importBrandCodes = async (deviceId, acBrand, codeMap) => {
+// Get device brand
+export const getDeviceBrand = async (deviceId) => {
   try {
-    const results = [];
+    const q = query(
+      collection(db, IR_CODES_COLLECTION),
+      where('deviceId', '==', deviceId)
+    );
     
-    for (const [functionType, irCode] of Object.entries(codeMap)) {
-      const result = await saveIRCode(deviceId, acBrand, functionType, irCode);
-      results.push({ functionType, result });
+    const querySnapshot = await getDocs(q);
+    
+    if (querySnapshot.empty) {
+      return { success: false, brand: null };
     }
     
-    const successful = results.filter(r => r.result.success).length;
-    const failed = results.filter(r => !r.result.success).length;
+    // Get brand from first IR code entry
+    const firstDoc = querySnapshot.docs[0];
+    const brand = firstDoc.data().brand;
     
-    return { 
-      success: true, 
-      imported: successful, 
-      failed: failed,
-      results: results,
-      message: `Imported ${successful} codes for ${acBrand}${failed > 0 ? `, ${failed} failed` : ''}` 
-    };
+    return { success: true, brand };
   } catch (error) {
-    console.error('Error importing brand codes:', error);
-    return { success: false, error: error.message };
+    console.error('Error getting device brand:', error);
+    return { success: false, error: error.message, brand: null };
   }
 };

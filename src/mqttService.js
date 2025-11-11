@@ -80,6 +80,31 @@ export function connectMqtt(onMessage, deviceTopicBase = null, onDeviceStatusCha
   client.on("message", (topic, message) => {
     try { 
       const data = JSON.parse(message.toString());
+      console.log(`📨 MQTT Message received on topic: ${topic}`, data);
+      
+      // Special handling for IR learning responses
+      if (data.type === 'ir_learning_response') {
+        console.log(`🎛️ IR LEARNING RESPONSE DETECTED!`);
+        console.log(`🎛️ Topic: ${topic}`);
+        console.log(`🎛️ Data:`, data);
+        console.log(`🎛️ Available callbacks:`, Object.keys(client.topicCallbacks || {}));
+      }
+      
+      // Call topic-specific callbacks first
+      if (client.topicCallbacks && client.topicCallbacks[topic]) {
+        console.log(`🎯 Calling topic-specific callback for: ${topic}`);
+        client.topicCallbacks[topic](topic, message);
+      } else {
+        console.log(`⚠️ No topic-specific callback found for: ${topic}`);
+        console.log(`📋 Available callbacks:`, Object.keys(client.topicCallbacks || {}));
+        
+        // Special debug for IR learning responses
+        if (data.type === 'ir_learning_response') {
+          console.log(`❌ IR LEARNING RESPONSE BUT NO CALLBACK!`);
+          console.log(`❌ Expected topic format: devices/{mac}/response`);
+          console.log(`❌ Actual topic: ${topic}`);
+        }
+      }
       
       // Handle device status changes
       if (topic.includes('/heartbeat') || topic.includes('/online') || topic.includes('/offline') || topic.includes('/status')) {
@@ -120,6 +145,11 @@ export function connectMqtt(onMessage, deviceTopicBase = null, onDeviceStatusCha
       // Handle non-JSON messages (like simple status messages)
       const messageStr = message.toString();
       console.log(`📨 Received message on ${topic}: ${messageStr}`);
+      
+      // Call topic-specific callbacks for non-JSON messages too
+      if (client.topicCallbacks && client.topicCallbacks[topic]) {
+        client.topicCallbacks[topic](topic, message);
+      }
       
       // Handle simple status messages
       if (topic.includes('/online') || topic.includes('/offline') || topic.includes('/heartbeat')) {
@@ -244,6 +274,166 @@ export function publishHeartbeat(macAddress) {
   client.publish(`${deviceTopic}/heartbeat`, message);
   console.log(`💓 Heartbeat published for ${macAddress}`);
   return true;
+}
+
+// Subscribe to a specific topic with callback
+export function subscribeToTopic(topic, messageCallback) {
+  if (!client || !client.connected) {
+    console.warn("⚠️ MQTT client not connected for subscription to:", topic);
+    return false;
+  }
+  
+  console.log(`🔔 Attempting to subscribe to topic: ${topic}`);
+  
+  client.subscribe(topic, (err) => {
+    if (err) {
+      console.error(`❌ Failed to subscribe to ${topic}:`, err);
+      return false;
+    }
+    console.log(`✅ Successfully subscribed to: ${topic}`);
+  });
+
+  // Store the callback for this topic
+  if (!client.topicCallbacks) {
+    client.topicCallbacks = {};
+    console.log(`📋 Initialized topic callbacks store`);
+  }
+  
+  client.topicCallbacks[topic] = messageCallback;
+  console.log(`💾 Stored callback for topic: ${topic}`);
+  console.log(`📋 Total registered callbacks: ${Object.keys(client.topicCallbacks).length}`);
+
+  return true;
+}
+
+// Unsubscribe from a specific topic
+export function unsubscribeFromTopic(topic) {
+  if (!client || !client.connected) {
+    console.warn("MQTT client not connected");
+    return false;
+  }
+  
+  client.unsubscribe(topic, (err) => {
+    if (err) {
+      console.error(`Failed to unsubscribe from ${topic}:`, err);
+      return false;
+    }
+    console.log(`📡 Unsubscribed from ${topic}`);
+  });
+
+  // Remove the callback for this topic
+  if (client.topicCallbacks && client.topicCallbacks[topic]) {
+    delete client.topicCallbacks[topic];
+  }
+
+  return true;
+}
+
+// Debug function to test topic subscription
+export function testTopicSubscription(macAddress) {
+  const macWithoutColons = macAddress.replace(/:/g, '');
+  const testTopic = `devices/${macWithoutColons}/response`;
+  
+  console.log(`🧪 Testing topic subscription:`);
+  console.log(`📍 Original MAC: ${macAddress}`);
+  console.log(`📍 Processed MAC: ${macWithoutColons}`);
+  console.log(`📡 Expected topic: ${testTopic}`);
+  
+  // Subscribe to test topic
+  subscribeToTopic(testTopic, (topic, message) => {
+    console.log(`🧪 TEST: Received message on ${topic}:`, message.toString());
+  });
+  
+  return testTopic;
+}
+
+// Get current subscriptions for debugging
+export function getSubscriptions() {
+  if (client && client.topicCallbacks) {
+    console.log(`📋 Current subscriptions:`, Object.keys(client.topicCallbacks));
+    return Object.keys(client.topicCallbacks);
+  }
+  return [];
+}
+
+// Test function to simulate ESP32 response (for debugging)
+export function simulateESP32Response(macAddress, command) {
+  const macWithoutColons = macAddress.replace(/:/g, '');
+  const topic = `devices/${macWithoutColons}/response`;
+  
+  const testResponse = {
+    type: "ir_learning_response",
+    success: true,
+    ir_command: command,
+    ir_code: "0x20DF10EF",
+    protocol: "NEC",
+    brand: "Samsung",
+    timestamp: new Date().toISOString()
+  };
+  
+  console.log(`🧪 Simulating ESP32 response on topic: ${topic}`);
+  console.log(`🧪 Test message:`, testResponse);
+  
+  if (client && client.connected) {
+    client.publish(topic, JSON.stringify(testResponse));
+    console.log(`✅ Test message published to ${topic}`);
+  } else {
+    console.error(`❌ MQTT client not connected, cannot publish test message`);
+  }
+}
+
+// Manual subscription test for debugging
+export function forceSubscribeToResponseTopic(macAddress) {
+  const macWithoutColons = macAddress.replace(/:/g, '');
+  const topic = `devices/${macWithoutColons}/response`;
+  
+  console.log(`🔧 FORCE SUBSCRIBING to: ${topic}`);
+  
+  if (!client || !client.connected) {
+    console.error(`❌ MQTT client not connected!`);
+    return false;
+  }
+  
+  // Force subscribe with callback
+  client.subscribe(topic, (err) => {
+    if (err) {
+      console.error(`❌ Failed to subscribe to ${topic}:`, err);
+    } else {
+      console.log(`✅ FORCE SUBSCRIBED to: ${topic}`);
+    }
+  });
+  
+  // Add a simple test callback
+  if (!client.topicCallbacks) {
+    client.topicCallbacks = {};
+  }
+  
+  client.topicCallbacks[topic] = (receivedTopic, message) => {
+    console.log(`🎯 FORCE CALLBACK TRIGGERED for topic: ${receivedTopic}`);
+    console.log(`📨 Message:`, message.toString());
+    try {
+      const data = JSON.parse(message.toString());
+      console.log(`📊 Parsed data:`, data);
+    } catch (e) {
+      console.log(`⚠️ Failed to parse JSON:`, e);
+    }
+  };
+  
+  console.log(`💾 Added force callback for: ${topic}`);
+  return true;
+}
+
+// Check MQTT connection status
+export function getMQTTStatus() {
+  const status = {
+    connected: client ? client.connected : false,
+    clientExists: !!client,
+    subscriptions: client?.topicCallbacks ? Object.keys(client.topicCallbacks) : [],
+    totalCallbacks: client?.topicCallbacks ? Object.keys(client.topicCallbacks).length : 0
+  };
+  
+  console.log(`📊 MQTT Status:`, status);
+  return status;
 }
 
 // Disconnect MQTT client

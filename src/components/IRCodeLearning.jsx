@@ -1,492 +1,651 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { 
-  AC_FUNCTIONS, 
   AC_BRANDS, 
-  saveIRCode, 
-  getDeviceIRCodes, 
-  deleteIRCode 
+  IR_COMMANDS, 
+  COMMAND_LABELS,
+  saveIRCode,
+  getDeviceIRCodes,
+  getIRCodeForCommand,
+  updateIRCode,
+  deleteIRCode
 } from '../services/irCodeService';
-import { connectMqtt, sendCommand } from '../mqttService';
+import { sendCommand } from '../mqttService';
 
-const IRCodeLearning = ({ selectedDevice, onIRCodeLearned }) => {
+const IRCodeLearning = forwardRef(({ selectedDevice, onClose }, ref) => {
   const [selectedBrand, setSelectedBrand] = useState('');
-  const [customBrand, setCustomBrand] = useState('');
-  const [learningMode, setLearningMode] = useState(false);
-  const [currentFunction, setCurrentFunction] = useState('');
+  const [learningCommand, setLearningCommand] = useState('');
+  const [isLearning, setIsLearning] = useState(false);
   const [learnedCodes, setLearnedCodes] = useState({});
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const [messageType, setMessageType] = useState(''); // 'success', 'error', 'info'
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [learningTimeout, setLearningTimeout] = useState(null);
 
   useEffect(() => {
-    if (selectedDevice && selectedBrand) {
-      loadLearnedCodes();
+    if (selectedDevice) {
+      loadDeviceIRCodes();
     }
-  }, [selectedDevice, selectedBrand]);
+  }, [selectedDevice]);
 
-  useEffect(() => {
-    // Setup MQTT listener for IR code responses
-    if (selectedDevice && learningMode) {
-      const deviceTopicBase = `devices/${selectedDevice.macAddress.replace(/:/g, '')}`;
-      const responseTopic = `${deviceTopicBase}/response`;
-      
-      const mqttConnection = connectMqtt(
-        (topic, message) => {
-          if (topic.includes('/response') && message.type === 'ir_learned') {
-            handleIRCodeReceived(message);
-          }
-        }
-      );
-
-      return () => {
-        // Cleanup MQTT connection when not learning
-        setLearningMode(false);
-      };
-    }
-  }, [selectedDevice, learningMode]);
-
-  const loadLearnedCodes = async () => {
-    if (!selectedDevice || !selectedBrand) return;
-    
-    setLoading(true);
+  const loadDeviceIRCodes = async () => {
     try {
-      const brand = selectedBrand === 'Other' ? customBrand : selectedBrand;
-      const result = await getDeviceIRCodes(selectedDevice.id, brand);
+      setLoading(true);
+      const result = await getDeviceIRCodes(selectedDevice.id);
       
       if (result.success) {
-        setLearnedCodes(result.groupedCodes);
+        const codesMap = {};
+        let deviceBrand = '';
+        
+        result.irCodes.forEach(code => {
+          codesMap[code.command] = code;
+          if (!deviceBrand && code.brand) {
+            deviceBrand = code.brand;
+          }
+        });
+        
+        setLearnedCodes(codesMap);
+        if (deviceBrand) {
+          setSelectedBrand(deviceBrand);
+        }
       }
-    } catch (error) {
-      console.error('Error loading learned codes:', error);
+    } catch (err) {
+      setError('Failed to load IR codes');
+      console.error('Error loading IR codes:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const startLearning = async (functionType) => {
-    if (!selectedDevice || !selectedBrand) {
-      setMessage('Please select a device and AC brand first');
-      setMessageType('error');
+  const startLearning = async (command) => {
+    if (!selectedBrand) {
+      setError('Please select AC brand first');
       return;
     }
 
-    setCurrentFunction(functionType);
-    setLearningMode(true);
-    setMessage(`Learning ${getFunctionDisplayName(functionType)}... Point your AC remote at the device and press the button.`);
-    setMessageType('info');
+    setLearningCommand(command);
+    setIsLearning(true);
+    setError('');
+    setSuccess('');
 
-    // Send learning command to ESP32
-    const deviceTopicBase = `devices/${selectedDevice.macAddress.replace(/:/g, '')}`;
-    const command = {
-      command: 'learn_ir',
-      function: functionType,
-      timeout: 30000 // 30 second timeout
-    };
-
-    const result = sendCommand(command.command, command, deviceTopicBase);
-    if (!result) {
-      setMessage('Failed to send learning command to device');
-      setMessageType('error');
-      setLearningMode(false);
-    }
-  };
-
-  const stopLearning = () => {
-    setLearningMode(false);
-    setCurrentFunction('');
-    setMessage('Learning cancelled');
-    setMessageType('info');
-
-    // Send stop learning command to ESP32
-    if (selectedDevice) {
-      const deviceTopicBase = `devices/${selectedDevice.macAddress.replace(/:/g, '')}`;
-      const command = { command: 'stop_learning' };
-      sendCommand(command.command, command, deviceTopicBase);
-    }
-  };
-
-  const handleIRCodeReceived = async (irData) => {
-    if (!currentFunction || !learningMode) return;
-
-    setLoading(true);
     try {
-      const brand = selectedBrand === 'Other' ? customBrand : selectedBrand;
-      const result = await saveIRCode(
-        selectedDevice.id,
-        brand,
-        currentFunction,
-        irData.code,
-        irData.rawData
-      );
+      // Send IR learning command to ESP32
+      const deviceTopicBase = `devices/${selectedDevice.macAddress.replace(/:/g, '')}`;
+      const learnCommand = {
+        command: 'learn_ir',
+        ir_command: command,
+        brand: selectedBrand,
+        timeout: 30000 // 30 second timeout
+      };
 
-      if (result.success) {
-        setMessage(`✅ Successfully learned ${getFunctionDisplayName(currentFunction)} for ${brand}!`);
-        setMessageType('success');
+      const result = sendCommand(learnCommand.command, learnCommand, deviceTopicBase);
+      
+      if (result) {
+        console.log(`📡 IR learning command sent for ${command}`);
         
-        // Update learned codes
-        setLearnedCodes(prev => ({
-          ...prev,
-          [currentFunction]: {
-            id: result.codeId,
-            functionType: currentFunction,
-            irCode: irData.code,
-            acBrand: brand,
-            learnedAt: new Date()
-          }
-        }));
+        // Set timeout for learning
+        const timeout = setTimeout(() => {
+          setIsLearning(false);
+          setLearningCommand('');
+          setError('Learning timeout. Please try again.');
+        }, 30000);
+        
+        setLearningTimeout(timeout);
+        
+        // Listen for response (this would be handled by MQTT message handler)
+        setupLearningListener(command);
+      } else {
+        throw new Error('Failed to send learning command');
+      }
+    } catch (err) {
+      setIsLearning(false);
+      setLearningCommand('');
+      setError('Failed to start IR learning: ' + err.message);
+      console.error('IR learning error:', err);
+    }
+  };
 
-        if (onIRCodeLearned) {
-          onIRCodeLearned(currentFunction, irData.code, brand);
+  const setupLearningListener = (command) => {
+    // This function sets up listening for the IR code response
+    // The actual MQTT response handling would be done in the parent component
+    // or through a global MQTT handler that calls handleLearningResponse
+    console.log(`🎯 Listening for IR learning response for command: ${command}`);
+  };
+
+  // This function should be called when MQTT response is received
+  const handleLearningResponse = async (responseData) => {
+    console.log('🎯 IR Learning Response Handler Called');
+    console.log('📨 Response data:', responseData);
+    console.log('🔄 Current learning state:', { isLearning, learningCommand });
+    
+    if (!isLearning) {
+      console.log('⚠️ Not currently learning, ignoring response');
+      return;
+    }
+    
+    if (responseData.ir_command !== learningCommand) {
+      console.log('⚠️ Response command mismatch:', {
+        expected: learningCommand,
+        received: responseData.ir_command
+      });
+      return;
+    }
+    
+    console.log('✅ Response validation passed, processing...');
+
+    clearTimeout(learningTimeout);
+    setIsLearning(false);
+
+    try {
+      if (responseData.success && responseData.ir_code) {
+        // Save the learned IR code to Firebase
+        const result = await saveIRCode(
+          selectedDevice.id,
+          selectedDevice.macAddress,
+          selectedBrand,
+          learningCommand,
+          responseData.ir_code,
+          responseData.protocol || 'NEC'
+        );
+
+        if (result.success) {
+          // Update local state
+          setLearnedCodes(prev => ({
+            ...prev,
+            [learningCommand]: {
+              id: result.id,
+              deviceId: selectedDevice.id,
+              macAddress: selectedDevice.macAddress,
+              brand: selectedBrand,
+              command: learningCommand,
+              irCode: responseData.ir_code,
+              protocol: responseData.protocol || 'NEC'
+            }
+          }));
+
+          setSuccess(`✅ Successfully learned ${COMMAND_LABELS[learningCommand]}`);
+          console.log(`✅ IR code learned and saved: ${learningCommand} = ${responseData.ir_code}`);
+        } else {
+          setError('Failed to save IR code: ' + result.error);
         }
       } else {
-        setMessage(`❌ Failed to save IR code: ${result.error}`);
-        setMessageType('error');
+        setError('Failed to learn IR code: ' + (responseData.error || 'No IR signal received'));
       }
-    } catch (error) {
-      setMessage(`❌ Error saving IR code: ${error.message}`);
-      setMessageType('error');
-    } finally {
-      setLoading(false);
-      setLearningMode(false);
-      setCurrentFunction('');
+    } catch (err) {
+      setError('Error processing IR code: ' + err.message);
+      console.error('Error processing learned IR code:', err);
     }
+
+    setLearningCommand('');
   };
 
-  const deleteLearnedCode = async (functionType) => {
-    const codeToDelete = learnedCodes[functionType];
-    if (!codeToDelete) return;
+  const cancelLearning = () => {
+    if (learningTimeout) {
+      clearTimeout(learningTimeout);
+    }
+    setIsLearning(false);
+    setLearningCommand('');
+    setError('');
+  };
 
-    const confirmed = window.confirm(`Delete learned code for ${getFunctionDisplayName(functionType)}?`);
-    if (!confirmed) return;
+  const testIRCode = async (command) => {
+    const irCode = learnedCodes[command];
+    if (!irCode) {
+      setError('No IR code found for this command');
+      return;
+    }
 
-    setLoading(true);
     try {
-      const result = await deleteIRCode(codeToDelete.id);
-      if (result.success) {
-        setMessage(`Deleted ${getFunctionDisplayName(functionType)} code`);
-        setMessageType('success');
-        
-        // Remove from learned codes
-        const updatedCodes = { ...learnedCodes };
-        delete updatedCodes[functionType];
-        setLearnedCodes(updatedCodes);
+      const deviceTopicBase = `devices/${selectedDevice.macAddress.replace(/:/g, '')}`;
+      const testCommand = {
+        command: 'send_ir',
+        ir_code: irCode.irCode,
+        protocol: irCode.protocol,
+        ir_command: command
+      };
+
+      const result = sendCommand(testCommand.command, testCommand, deviceTopicBase);
+      
+      if (result) {
+        setSuccess(`🧪 Testing ${COMMAND_LABELS[command]}...`);
+        console.log(`🧪 Testing IR code for ${command}: ${irCode.irCode}`);
       } else {
-        setMessage(`Failed to delete code: ${result.error}`);
-        setMessageType('error');
+        setError('Failed to send test command');
       }
-    } catch (error) {
-      setMessage(`Error deleting code: ${error.message}`);
-      setMessageType('error');
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      setError('Failed to test IR code: ' + err.message);
+      console.error('IR test error:', err);
     }
   };
 
-  const testLearnedCode = (functionType) => {
-    const code = learnedCodes[functionType];
-    if (!code || !selectedDevice) return;
+  const deleteIRCodeHandler = async (command) => {
+    const irCode = learnedCodes[command];
+    if (!irCode || !window.confirm(`Delete IR code for ${COMMAND_LABELS[command]}?`)) {
+      return;
+    }
 
-    // Send test command to ESP32
-    const deviceTopicBase = `devices/${selectedDevice.macAddress.replace(/:/g, '')}`;
-    const command = {
-      command: 'send_ir',
-      function: functionType,
-      code: code.irCode
-    };
-
-    const result = sendCommand(command.command, command, deviceTopicBase);
-    if (result) {
-      setMessage(`📡 Testing ${getFunctionDisplayName(functionType)} code...`);
-      setMessageType('info');
-    } else {
-      setMessage(`Failed to test ${getFunctionDisplayName(functionType)} code`);
-      setMessageType('error');
+    try {
+      const result = await deleteIRCode(irCode.id);
+      
+      if (result.success) {
+        setLearnedCodes(prev => {
+          const updated = { ...prev };
+          delete updated[command];
+          return updated;
+        });
+        setSuccess(`🗑️ Deleted ${COMMAND_LABELS[command]} IR code`);
+      } else {
+        setError('Failed to delete IR code: ' + result.error);
+      }
+    } catch (err) {
+      setError('Error deleting IR code: ' + err.message);
+      console.error('Delete IR code error:', err);
     }
   };
 
-  const getFunctionDisplayName = (functionType) => {
-    const names = {
-      [AC_FUNCTIONS.POWER_ON]: 'Power On',
-      [AC_FUNCTIONS.POWER_OFF]: 'Power Off',
-      [AC_FUNCTIONS.TEMP_UP]: 'Temperature Up',
-      [AC_FUNCTIONS.TEMP_DOWN]: 'Temperature Down',
-      [AC_FUNCTIONS.MODE_COOL]: 'Cool Mode',
-      [AC_FUNCTIONS.MODE_HEAT]: 'Heat Mode',
-      [AC_FUNCTIONS.MODE_FAN]: 'Fan Mode',
-      [AC_FUNCTIONS.MODE_DRY]: 'Dry Mode',
-      [AC_FUNCTIONS.MODE_AUTO]: 'Auto Mode',
-      [AC_FUNCTIONS.FAN_LOW]: 'Fan Low',
-      [AC_FUNCTIONS.FAN_MED]: 'Fan Medium',
-      [AC_FUNCTIONS.FAN_HIGH]: 'Fan High',
-      [AC_FUNCTIONS.FAN_AUTO]: 'Fan Auto',
-      [AC_FUNCTIONS.SWING_ON]: 'Swing On',
-      [AC_FUNCTIONS.SWING_OFF]: 'Swing Off',
-      [AC_FUNCTIONS.TIMER]: 'Timer',
-      [AC_FUNCTIONS.SLEEP]: 'Sleep Mode'
+  // Expose the handleLearningResponse function for parent component
+  useImperativeHandle(ref, () => {
+    console.log('🔧 useImperativeHandle called, exposing handleLearningResponse');
+    console.log('🔧 Current learning state:', { isLearning, learningCommand });
+    const exposedMethods = {
+      handleLearningResponse,
+      // Add some debug methods
+      getCurrentState: () => ({ isLearning, learningCommand }),
+      testMethod: () => console.log('🧪 Test method called from IR Learning component')
     };
-    return names[functionType] || functionType;
+    console.log('🔧 Exposed methods:', Object.keys(exposedMethods));
+    return exposedMethods;
+  }, [handleLearningResponse, isLearning, learningCommand]);
+
+  // Debug: Log when component mounts and unmounts
+  useEffect(() => {
+    console.log('🎛️ IRCodeLearning component mounted');
+    
+    // Store handler globally as backup
+    window.irLearningHandler = handleLearningResponse;
+    console.log('💾 Stored IR learning handler globally');
+    
+    return () => {
+      console.log('🎛️ IRCodeLearning component unmounted');
+      window.irLearningHandler = null;
+    };
+  }, [handleLearningResponse]);
+
+  const commandCategories = {
+    'Power': [IR_COMMANDS.POWER_ON, IR_COMMANDS.POWER_OFF, IR_COMMANDS.POWER_TOGGLE],
+    'Temperature': [IR_COMMANDS.TEMP_UP, IR_COMMANDS.TEMP_DOWN],
+    'Mode': [IR_COMMANDS.MODE_COOL, IR_COMMANDS.MODE_HEAT, IR_COMMANDS.MODE_FAN, IR_COMMANDS.MODE_DRY, IR_COMMANDS.MODE_AUTO],
+    'Fan': [IR_COMMANDS.FAN_LOW, IR_COMMANDS.FAN_MED, IR_COMMANDS.FAN_HIGH, IR_COMMANDS.FAN_AUTO],
+    'Other': [IR_COMMANDS.SWING_ON, IR_COMMANDS.SWING_OFF, IR_COMMANDS.TIMER, IR_COMMANDS.SLEEP]
   };
 
-  const clearMessage = () => {
-    setMessage('');
-    setMessageType('');
-  };
-
-  if (!selectedDevice) {
+  if (loading) {
     return (
-      <div className="ir-learning-container">
-        <p className="no-device-message">Please select a device to configure IR codes</p>
+      <div className="ir-learning-modal">
+        <div className="ir-learning-content">
+          <div className="loading">Loading IR codes...</div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="ir-learning-container">
-      <div className="ir-learning-header">
-        <h3>🔧 IR Remote Learning</h3>
-        <p>Learn IR codes from your AC remote control</p>
-      </div>
-
-      {/* Brand Selection */}
-      <div className="brand-selection">
-        <label htmlFor="ac-brand">AC Brand:</label>
-        <select
-          id="ac-brand"
-          value={selectedBrand}
-          onChange={(e) => setSelectedBrand(e.target.value)}
-          disabled={learningMode}
-        >
-          <option value="">Select AC Brand</option>
-          {AC_BRANDS.map(brand => (
-            <option key={brand} value={brand}>{brand}</option>
-          ))}
-        </select>
-
-        {selectedBrand === 'Other' && (
-          <input
-            type="text"
-            placeholder="Enter custom brand name"
-            value={customBrand}
-            onChange={(e) => setCustomBrand(e.target.value)}
-            disabled={learningMode}
-            className="custom-brand-input"
-          />
-        )}
-      </div>
-
-      {/* Message Display */}
-      {message && (
-        <div className={`message-bar ${messageType}`}>
-          <span>{message}</span>
-          <button onClick={clearMessage} className="close-message">×</button>
+    <div className="ir-learning-modal">
+      <div className="ir-learning-content">
+        <div className="ir-learning-header">
+          <h2>🎛️ IR Remote Code Learning</h2>
+          <button onClick={onClose} className="close-btn">✕</button>
         </div>
-      )}
 
-      {/* Learning Controls */}
-      {selectedBrand && (selectedBrand !== 'Other' || customBrand) && (
-        <div className="learning-controls">
-          <div className="function-grid">
-            {Object.values(AC_FUNCTIONS).map(functionType => (
-              <div key={functionType} className="function-item">
-                <div className="function-info">
-                  <span className="function-name">{getFunctionDisplayName(functionType)}</span>
-                  {learnedCodes[functionType] && (
-                    <span className="learned-indicator">✅ Learned</span>
-                  )}
-                </div>
-                
-                <div className="function-actions">
-                  {!learningMode ? (
-                    <>
-                      <button
-                        onClick={() => startLearning(functionType)}
-                        className="learn-btn"
-                        disabled={loading}
-                      >
-                        {learnedCodes[functionType] ? '🔄 Re-learn' : '📡 Learn'}
-                      </button>
-                      
-                      {learnedCodes[functionType] && (
-                        <>
+        <div className="device-info">
+          <h3>Device: {selectedDevice.name}</h3>
+          <p>MAC: {selectedDevice.macAddress}</p>
+        </div>
+
+        {/* Brand Selection */}
+        <div className="brand-selection">
+          <label htmlFor="brand-select">AC Brand:</label>
+          <select
+            id="brand-select"
+            value={selectedBrand}
+            onChange={(e) => setSelectedBrand(e.target.value)}
+            disabled={isLearning}
+          >
+            <option value="">Select AC Brand</option>
+            {AC_BRANDS.map(brand => (
+              <option key={brand} value={brand}>{brand}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Status Messages */}
+        {error && <div className="error-message">❌ {error}</div>}
+        {success && <div className="success-message">✅ {success}</div>}
+
+        {/* Learning Status */}
+        {isLearning && (
+          <div className="learning-status">
+            <div className="learning-indicator">
+              <div className="spinner"></div>
+              <div className="learning-text">
+                <h3>Learning {COMMAND_LABELS[learningCommand]}...</h3>
+                <p>Point your AC remote at the ESP32 and press the corresponding button</p>
+                <button onClick={cancelLearning} className="cancel-btn">Cancel</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Command Categories */}
+        {!isLearning && selectedBrand && (
+          <div className="commands-grid">
+            {Object.entries(commandCategories).map(([category, commands]) => (
+              <div key={category} className="command-category">
+                <h4>{category}</h4>
+                <div className="command-buttons">
+                  {commands.map(command => {
+                    const isLearned = learnedCodes[command];
+                    return (
+                      <div key={command} className="command-item">
+                        <div className="command-info">
+                          <span className="command-label">{COMMAND_LABELS[command]}</span>
+                          {isLearned && <span className="learned-badge">✓</span>}
+                        </div>
+                        <div className="command-actions">
                           <button
-                            onClick={() => testLearnedCode(functionType)}
-                            className="test-btn"
-                            disabled={loading}
+                            onClick={() => startLearning(command)}
+                            className={`learn-btn ${isLearned ? 'relearn' : ''}`}
+                            disabled={isLearning}
                           >
-                            🧪 Test
+                            {isLearned ? '🔄 Re-learn' : '📡 Learn'}
                           </button>
-                          <button
-                            onClick={() => deleteLearnedCode(functionType)}
-                            className="delete-btn"
-                            disabled={loading}
-                          >
-                            🗑️
-                          </button>
-                        </>
-                      )}
-                    </>
-                  ) : currentFunction === functionType ? (
-                    <button
-                      onClick={stopLearning}
-                      className="stop-btn"
-                    >
-                      ⏹️ Stop Learning
-                    </button>
-                  ) : (
-                    <button disabled className="learn-btn disabled">
-                      Waiting...
-                    </button>
-                  )}
+                          {isLearned && (
+                            <>
+                              <button
+                                onClick={() => testIRCode(command)}
+                                className="test-btn"
+                                disabled={isLearning}
+                              >
+                                🧪 Test
+                              </button>
+                              <button
+                                onClick={() => deleteIRCodeHandler(command)}
+                                className="delete-btn"
+                                disabled={isLearning}
+                              >
+                                🗑️
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ))}
           </div>
+        )}
+
+        {/* Debug Test Button */}
+        <div style={{textAlign: 'center', marginBottom: '16px'}}>
+          <button
+            onClick={() => {
+              console.log('🧪 Testing handleLearningResponse directly...');
+              const testData = {
+                type: "ir_learning_response",
+                success: true,
+                ir_command: learningCommand || "power_on",
+                ir_code: "0x20DF10EF",
+                protocol: "NEC"
+              };
+              console.log('🧪 Test data:', testData);
+              console.log('🧪 Current learning state:', { isLearning, learningCommand });
+              handleLearningResponse(testData);
+            }}
+            style={{
+              background: '#10b981',
+              color: 'white',
+              border: 'none',
+              padding: '8px 16px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '12px'
+            }}
+          >
+            🧪 Test Handler
+          </button>
         </div>
-      )}
+
+        {/* Instructions */}
+        <div className="instructions">
+          <h4>📋 Instructions:</h4>
+          <ol>
+            <li>Select your AC brand from the dropdown</li>
+            <li>Click "📡 Learn" for any button you want to teach</li>
+            <li>Point your original AC remote at the ESP32 device</li>
+            <li>Press the corresponding button on your remote within 30 seconds</li>
+            <li>Use "🧪 Test" to verify the learned code works</li>
+            <li>Learned codes are automatically saved to your device</li>
+          </ol>
+        </div>
+      </div>
 
       <style jsx>{`
-        .ir-learning-container {
+        .ir-learning-modal {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+          padding: 20px;
+        }
+
+        .ir-learning-content {
           background: white;
           border-radius: 12px;
           padding: 24px;
-          margin-top: 24px;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          max-width: 800px;
+          max-height: 90vh;
+          overflow-y: auto;
+          width: 100%;
         }
 
         .ir-learning-header {
-          margin-bottom: 24px;
-          text-align: center;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 20px;
+          border-bottom: 2px solid #f3f4f6;
+          padding-bottom: 16px;
         }
 
-        .ir-learning-header h3 {
+        .ir-learning-header h2 {
+          margin: 0;
+          color: #1f2937;
+          font-size: 1.5rem;
+        }
+
+        .close-btn {
+          background: #ef4444;
+          color: white;
+          border: none;
+          border-radius: 50%;
+          width: 32px;
+          height: 32px;
+          cursor: pointer;
+          font-size: 16px;
+        }
+
+        .device-info {
+          background: #f8fafc;
+          padding: 16px;
+          border-radius: 8px;
+          margin-bottom: 20px;
+        }
+
+        .device-info h3 {
           margin: 0 0 8px 0;
           color: #1f2937;
-          font-size: 1.25rem;
-          font-weight: 600;
         }
 
-        .ir-learning-header p {
+        .device-info p {
           margin: 0;
           color: #6b7280;
-          font-size: 0.875rem;
+          font-family: monospace;
         }
 
         .brand-selection {
-          margin-bottom: 24px;
+          margin-bottom: 20px;
         }
 
         .brand-selection label {
           display: block;
           margin-bottom: 8px;
+          font-weight: 600;
           color: #374151;
-          font-weight: 500;
         }
 
-        .brand-selection select,
-        .custom-brand-input {
+        .brand-selection select {
           width: 100%;
           padding: 8px 12px;
           border: 2px solid #e5e7eb;
           border-radius: 6px;
-          font-size: 1rem;
-          transition: border-color 0.2s;
+          font-size: 16px;
         }
 
-        .brand-selection select:focus,
-        .custom-brand-input:focus {
-          outline: none;
-          border-color: #3b82f6;
-        }
-
-        .custom-brand-input {
-          margin-top: 12px;
-        }
-
-        .message-bar {
-          padding: 12px 16px;
-          margin-bottom: 20px;
-          border-radius: 6px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-
-        .message-bar.success {
-          background: #ecfdf5;
-          color: #059669;
-          border: 1px solid #a7f3d0;
-        }
-
-        .message-bar.error {
+        .error-message {
           background: #fef2f2;
           color: #dc2626;
+          padding: 12px;
+          border-radius: 6px;
+          margin-bottom: 16px;
           border: 1px solid #fecaca;
         }
 
-        .message-bar.info {
+        .success-message {
+          background: #f0fdf4;
+          color: #16a34a;
+          padding: 12px;
+          border-radius: 6px;
+          margin-bottom: 16px;
+          border: 1px solid #bbf7d0;
+        }
+
+        .learning-status {
           background: #eff6ff;
-          color: #2563eb;
-          border: 1px solid #bfdbfe;
+          padding: 24px;
+          border-radius: 8px;
+          margin-bottom: 20px;
+          border: 2px solid #3b82f6;
         }
 
-        .close-message {
-          background: none;
-          border: none;
-          font-size: 1.25rem;
-          cursor: pointer;
-          padding: 0;
-          margin-left: 12px;
-          opacity: 0.7;
-        }
-
-        .close-message:hover {
-          opacity: 1;
-        }
-
-        .function-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        .learning-indicator {
+          display: flex;
+          align-items: center;
           gap: 16px;
         }
 
-        .function-item {
+        .spinner {
+          width: 40px;
+          height: 40px;
+          border: 4px solid #e5e7eb;
+          border-top: 4px solid #3b82f6;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
+        .learning-text h3 {
+          margin: 0 0 8px 0;
+          color: #1f2937;
+        }
+
+        .learning-text p {
+          margin: 0 0 12px 0;
+          color: #6b7280;
+        }
+
+        .cancel-btn {
+          background: #ef4444;
+          color: white;
+          border: none;
+          padding: 6px 12px;
+          border-radius: 4px;
+          cursor: pointer;
+        }
+
+        .commands-grid {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+          margin-bottom: 24px;
+        }
+
+        .command-category h4 {
+          margin: 0 0 12px 0;
+          color: #1f2937;
+          font-size: 1.1rem;
+          padding-bottom: 8px;
+          border-bottom: 1px solid #e5e7eb;
+        }
+
+        .command-buttons {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+          gap: 12px;
+        }
+
+        .command-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px;
+          background: #f9fafb;
+          border-radius: 6px;
           border: 1px solid #e5e7eb;
-          border-radius: 8px;
-          padding: 16px;
-          background: #fafafa;
         }
 
-        .function-info {
-          margin-bottom: 12px;
+        .command-info {
+          display: flex;
+          align-items: center;
+          gap: 8px;
         }
 
-        .function-name {
+        .command-label {
           font-weight: 500;
           color: #374151;
         }
 
-        .learned-indicator {
-          display: block;
-          font-size: 0.75rem;
-          color: #059669;
-          margin-top: 4px;
+        .learned-badge {
+          background: #10b981;
+          color: white;
+          font-size: 12px;
+          padding: 2px 6px;
+          border-radius: 10px;
         }
 
-        .function-actions {
+        .command-actions {
           display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
+          gap: 6px;
         }
 
         .learn-btn,
         .test-btn,
-        .delete-btn,
-        .stop-btn {
+        .delete-btn {
           padding: 6px 12px;
           border: none;
           border-radius: 4px;
-          font-size: 0.875rem;
           cursor: pointer;
+          font-size: 12px;
           transition: background-color 0.2s;
         }
 
@@ -495,8 +654,8 @@ const IRCodeLearning = ({ selectedDevice, onIRCodeLearned }) => {
           color: white;
         }
 
-        .learn-btn:hover:not(:disabled) {
-          background: #2563eb;
+        .learn-btn.relearn {
+          background: #f59e0b;
         }
 
         .test-btn {
@@ -504,55 +663,76 @@ const IRCodeLearning = ({ selectedDevice, onIRCodeLearned }) => {
           color: white;
         }
 
-        .test-btn:hover:not(:disabled) {
-          background: #059669;
-        }
-
         .delete-btn {
           background: #ef4444;
           color: white;
         }
 
-        .delete-btn:hover:not(:disabled) {
-          background: #dc2626;
+        .learn-btn:hover {
+          background: #2563eb;
         }
 
-        .stop-btn {
-          background: #f59e0b;
-          color: white;
-        }
-
-        .stop-btn:hover {
+        .learn-btn.relearn:hover {
           background: #d97706;
         }
 
-        .learn-btn.disabled,
-        .learn-btn:disabled,
-        .test-btn:disabled,
-        .delete-btn:disabled {
-          background: #d1d5db;
-          cursor: not-allowed;
+        .test-btn:hover {
+          background: #059669;
         }
 
-        .no-device-message {
-          text-align: center;
+        .delete-btn:hover {
+          background: #dc2626;
+        }
+
+        .instructions {
+          background: #f8fafc;
+          padding: 16px;
+          border-radius: 8px;
+          border-left: 4px solid #3b82f6;
+        }
+
+        .instructions h4 {
+          margin: 0 0 12px 0;
+          color: #1f2937;
+        }
+
+        .instructions ol {
+          margin: 0;
+          padding-left: 20px;
           color: #6b7280;
-          padding: 40px 20px;
-          font-style: italic;
+        }
+
+        .instructions li {
+          margin-bottom: 6px;
+        }
+
+        .loading {
+          text-align: center;
+          padding: 40px;
+          color: #6b7280;
         }
 
         @media (max-width: 768px) {
-          .function-grid {
+          .ir-learning-modal {
+            padding: 10px;
+          }
+
+          .ir-learning-content {
+            padding: 16px;
+          }
+
+          .command-buttons {
             grid-template-columns: 1fr;
           }
-          
-          .function-actions {
-            justify-content: center;
+
+          .learning-indicator {
+            flex-direction: column;
+            text-align: center;
           }
         }
       `}</style>
     </div>
   );
-};
+});
 
 export default IRCodeLearning;
